@@ -31,7 +31,7 @@ export default function HealthStatus() {
             <div>
                 <h1>Service Status</h1>
                 <div className="HealthTable">
-                <table className="StatusTable">
+                <table className="StatsTable">
                     <tbody>
 					    <thead>
                             <tr>
@@ -48,11 +48,11 @@ export default function HealthStatus() {
 							<td>{stats['storage']}</td>
 						</tr>
                         <tr>
-							<td>Receiver</td>
+							<td>Processing</td>
 							<td>{stats['processing']}</td>
 						</tr>
                         <tr>
-							<td>Receiver</td>
+							<td>Audit</td>
 							<td>{stats['audit_log']}</td>
 						</tr>
 					</tbody>
