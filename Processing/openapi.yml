@@ -20,9 +20,7 @@ paths:
           content: 
             application/json: 
               schema: 
-                type: object 
-                items: 
-                  $ref: '#/components/schemas/ReadingStats' 
+                $ref: '#/components/schemas/ReadingStats' 
         '400': 
           description: Invalid request 
           content: 
@@ -32,13 +30,24 @@ paths:
                 properties: 
                   message: 
                     type: string 
+  /health:
+      get:
+        summary: service health status
+        description: service health status
+        operationId: app.get_health
+        responses:
+          '200':
+            description: Returned service status
+          '400':
+            description: service is down
+          '404':
+            description: Not Found
 components: 
   schemas: 
     ReadingStats: 
       required: 
       - num_of_review
       - avg_age 
-      - avg_runtime 
       - total_sale
       - num_of_ticket
       properties: 
@@ -54,7 +63,4 @@ components:
         num_of_ticket: 
           type: integer 
           example: 35
-        avg_runtime: 
-          type: number 
-          example: 120.5
       type: object

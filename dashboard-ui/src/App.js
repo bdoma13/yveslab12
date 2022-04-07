@@ -17,6 +17,7 @@ function App() {
             <img src={logo} className="App-logo" alt="logo" height="150px" width="400px"/>
             <div>
                 <AppStats/>
+                <HealthStatus/>
                 <h1>Audit Endpoints</h1>
                 {rendered_endpoints}
             </div>

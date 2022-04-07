@@ -105,8 +105,9 @@ def process_messages():
             consumer = topic.get_simple_consumer(consumer_group=b'event_group', 
                                                 reset_offset_on_start=False, 
                                                 auto_offset_reset=OffsetType.LATEST) 
-            current_retry = app_config["events"]["max_retries"]
+            #current_retry = app_config["events"]["max_retries"]
             logger.info("Connected to Kafka")
+            break
         except:
             logger.error("Connection to Kafka failed!")
             time.sleep(app_config["events"]["sleep"])
@@ -162,6 +163,9 @@ def process_messages():
  
         # Commit the new message as being read 
         consumer.commit_offsets()
+
+def get_health():
+    return 200
 
 app = connexion.FlaskApp(__name__, specification_dir='')
 app.add_api("openapi.yml", base_path="/storage", strict_validation=True, validate_responses=True)

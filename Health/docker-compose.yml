@@ -1,0 +1,167 @@
+version: '3.3'
+services:
+
+  zookeeper:
+    restart: always
+    image: wurstmeister/zookeeper
+    ports:
+      - "2181"
+    hostname: zookeeper
+    volumes:
+      - /home/azureuser/zookeeper/data:/opt/zookeeper-3.4.13/data
+
+  kafka:
+    restart: always
+    image: wurstmeister/kafka
+    command: [ start-kafka.sh ]
+    ports:
+      - "9092:9092"
+    hostname: kafka
+    environment:
+      KAFKA_CREATE_TOPICS: "events:1:1"
+      KAFKA_ADVERTISED_HOST_NAME: kafka3855.eastus.cloudapp.azure.com
+      KAFKA_LISTENERS: INSIDE://:29092,OUTSIDE://:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+      KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka:29092,OUTSIDE://kafka3855.eastus.cloudapp.azure.com:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LOG_DIRS: /kafka/kafka-logs
+      KAFKA_BROKER_ID: 1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /home/azureuser/kafka:/kafka/kafka-logs
+    depends_on:
+      - "zookeeper"
+
+  db:
+    restart: always
+    image: mysql:5.7
+    environment:
+      MYSQL_DATABASE: 'events'
+      MYSQL_USER: 'user'
+      MYSQL_PASSWORD: 'password'
+      MYSQL_ROOT_PASSWORD: 'password'
+    ports:
+      - '3306:3306'
+    expose:
+      - '3306'
+    volumes:
+      - my-db:/var/lib/mysql
+      
+  receiver:
+    restart: always
+    build: ../receiver
+    environment:
+      - TARGET_ENV=test
+    volumes:
+      - /home/azureuser/config/receiver:/config
+      - /home/azureuser/logs:/logs
+    ports: 
+      - "8080"
+    depends_on:
+      - "kafka"
+    networks:
+      - "api.network"
+
+  storage:
+    restart: always
+    build: ../storage
+    image: storage
+    environment:
+      - TARGET_ENV=test
+    volumes:
+      - /home/azureuser/config/storage:/config
+      - /home/azureuser/logs:/logs
+    ports:
+      - "8090"
+    depends_on:
+        - db
+        - kafka
+    networks:
+      - "api.network"
+
+
+  processing:
+    restart: always
+    build: ../processing
+    image: processing
+    environment:
+      - TARGET_ENV=test
+    volumes:
+      - /home/azureuser/config/processing:/config
+      - /home/azureuser/logs:/logs
+      - processing-db:/data
+    ports:
+      - "8100"
+    depends_on:
+      - storage
+    networks:
+      - "api.network"
+
+  audit_log:
+    restart: always
+    build: ../audit_log
+    image: audit_log
+    environment:
+      - TARGET_ENV=test
+    volumes:
+      - /home/azureuser/config/audit_log:/config
+      - /home/azureuser/logs:/logs
+    ports:
+      - "8110"
+    networks:
+      - "api.network"
+    depends_on:
+      - kafka
+
+  health:
+    build: ../health
+    environment:
+      - TARGET_ENV=test
+    ports:
+      - "8120"
+    networks:
+      - "api.network"
+    volumes:
+      - /home/azureuser/config/health:/config
+      - /home/azureuser/logs:/logs
+      - health-db:/data
+
+
+  dashboard-ui:
+    restart: always
+    build: ../dashboard-ui
+    ports:
+      - "3000"
+    depends_on:
+      - "processing"
+      - "audit_log"
+    networks:
+      - "api.network"
+
+  nginx:
+    restart: always
+    image: nginx:latest
+# Connects the conf file of the container to the conf file in our folder 
+    volumes:
+      - /home/azureuser/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+# It will start up the nginx only when all api containers have started 
+    depends_on:
+      - "receiver"
+      - "storage"
+      - "processing" 
+      - "audit_log" 
+      - "dashboard-ui"
+    # Connects the port 80 of the nginx container to localhost:80 or localhost 
+    ports:
+      - "80:80" 
+    networks:
+      - "api.network"
+
+volumes:
+  my-db:
+  processing-db:
+  health-db:
+
+networks:
+  api.network:

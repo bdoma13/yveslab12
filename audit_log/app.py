@@ -114,6 +114,8 @@ def get_review(index):
     logger.error("Could not find Review Item at index %d" % index) 
     return {"message": "Not Found"}, 404 
 
+def get_health():
+    return 200
 
 app = connexion.FlaskApp(__name__, specification_dir='')
 CORS(app.app)

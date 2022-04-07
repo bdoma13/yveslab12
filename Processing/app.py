@@ -63,16 +63,6 @@ if not os.path.exists(app_config["datastore"]["filename"]):
             num_of_ticket INTEGER NOT NULL, 
             last_updated VARCHAR(100) NOT NULL) 
             ''')
-    c.execute(''' 
-            INSERT INTO stats(
-            num_of_review, 
-            avg_age, 
-            avg_rating, 
-            total_sale, 
-            num_of_ticket, 
-            last_updated)
-            VALUES(0,0,0,0, '1000-01-01 01:00:00'); 
-            ''') 
 
     conn.commit() 
     conn.close() 
@@ -81,9 +71,9 @@ if not os.path.exists(app_config["datastore"]["filename"]):
 def populate_stats(): 
     """ Periodically update stats """ 
     logger.info(f"Periodic Request Process Has Started")
-
+    
     timestamp_now = datetime.now()
-    timestamp_now_str = timestamp_now.strftime("%Y-%m-%dT%H:%M:%S")
+    timestamp_now_str = timestamp_now.strftime("%Y-%m-%d %H:%M:%S")
     session = DB_SESSION() 
     try:
         readings = session.query(Stats).order_by(Stats.last_updated.desc()).first()
@@ -94,15 +84,17 @@ def populate_stats():
         #     results.append(reading.to_dict())
         results = readings.to_dict()["last_updated"].replace(microsecond=0)
     except:
-        results = '0001-01-01 01:01:01'
-    
+        results = {'num_of_review': 0, 'avg_age': 22.2, 'avg_rating': 4.5, 'total_sale': 1100.00, 'num_of_ticket':2, 'last_updated':'0001-01-01 01:01:01'}
+
+    session.close()
     # print(results)
-    review_url = f"{app_config['eventstore']['url']}/movie/review?start_timestamp={results}&end_timestamp={timestamp_now_str}"
-    ticket_url = f"{app_config['eventstore']['url']}/movie/ticket?start_timestamp={results}&end_timestamp={timestamp_now_str}"
+    review_url = f"{app_config['eventstore']['url']}/movie/review?start_timestamp={results['last_updated']}&end_timestamp={timestamp_now_str}"
+    ticket_url = f"{app_config['eventstore']['url']}/movie/ticket?start_timestamp={results['last_updated']}&end_timestamp={timestamp_now_str}"
     review_res = requests.get(review_url)
     ticket_res = requests.get(ticket_url)
     review = review_res.json()
     ticket = ticket_res.json()
+
     if len(review) != 0 or len(ticket) != 0:
         responses = len(review) + len(ticket)
 
@@ -122,7 +114,7 @@ def populate_stats():
         logger.debug(f"Average rating of reviews: {avg_rating_view}. TraceID: {trace_id}")
         logger.debug(f"Total sales: {total_sale_ticket}. TraceID: {trace_id}")
         logger.debug(f"Total number of ticket sold: {len(ticket)}. TraceID: {trace_id}")
-
+        session = DB_SESSION()
         stats = Stats(len(review), 
                 avg_age_view, 
                 avg_rating_view, 
@@ -134,31 +126,26 @@ def populate_stats():
         logger.debug(f"New Stat entry. TraceID: {trace_id}")
         session.commit()
 
-    session.close()
+        session.close()
 
     logger.info(f"Periodic Request Process has ended.")
 
 
 def get_stats():
     logger.info("request for statistics received")
- 
-    session = DB_SESSION() 
+    default_stats = {'num_of_review': 0, 'avg_age': 22.2, 'avg_rating': 4.5, 'total_sale': 1100.00, 'num_of_ticket':2, 'last_updated':'0001-01-01 01:01:01'} 
+    try:
+        session = DB_SESSION() 
 
-    results = session.query(Stats).order_by(Stats.last_updated.desc()) 
-    
-    results_list = [] 
-    
-    if results:
-        for reading in results: 
-            results_list.append(reading.to_dict()) 
-    
-    session.close()
-    
-    newest_list = results_list[0]
-    logger.debug(f"Statistics contents{newest_list}")
-    logger.info("statistics request has been fulfilled")
 
-    return results, 200
+        results = session.query(Stats).order_by(Stats.last_updated.desc()).first() 
+    
+    
+        session.close()
+        return results.to_dict(), 200
+    except:
+        return default_stats, 200
+
 
 
 def init_scheduler():
@@ -166,12 +153,15 @@ def init_scheduler():
     sched.add_job(populate_stats,'interval',seconds=app_config['scheduler']['period_sec']) 
     sched.start()
 
+def get_health():
+    return 200
+
 app = connexion.FlaskApp(__name__, specification_dir='')
 CORS(app.app)
 if "TARGET_ENV" not in os.environ or os.environ["TARGET_ENV"] != "test":
     CORS(app.app)
     app.app.config['CORS_HEADERS'] = 'Content-Type'
-app.add_api(yaml_file, strict_validation=True, validate_responses=True)
+app.add_api(yaml_file, base_path="/processing", strict_validation=True, validate_responses=True)
 
 if __name__ == "__main__":
     init_scheduler() 

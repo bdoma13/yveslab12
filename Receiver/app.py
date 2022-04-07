@@ -37,16 +37,18 @@ logger.info("Log Conf File: %s" % log_conf_file)
 current_retry = 0
 
 while current_retry < app_config["events"]["max_retries"]:
+    logger.info(f"trying to connect to Kafka server. Try num: {current_retry}")
     try:
         hostname = "%s:%d" % (app_config["events"]["hostname"],   
                             app_config["events"]["port"]) 
         client = KafkaClient(hosts=hostname)
         topic = client.topics[str.encode(app_config["events"]["topic"])]
         producer = topic.get_sync_producer() 
-        current_retry = app_config["events"]["max_retries"]
+        #current_retry = app_config["events"]["max_retries"]
         logger.info("Connected to Kafka")
+        break
     except:
-        logger.error("Connection to Kafka failed!")
+        logger.error(f"Connection to Kafka failed! Try num: {current_retry}")
         time.sleep(app_config["events"]["sleep"])
         current_retry += 1
 
@@ -58,7 +60,7 @@ def ticket_info(body):
     msg = { "type": "ticket_info",  
             "datetime" :    
             datetime.now().strftime( 
-                "%Y-%m-%dT%H:%M:%S"),  
+                "%Y-%m-%d %H:%M:%S"),  
             "payload": body } 
     msg_str = json.dumps(msg) 
     producer.produce(msg_str.encode('utf-8'))
@@ -76,7 +78,7 @@ def review_info(body):
     msg = { "type": "review_info",  
             "datetime" :    
             datetime.now().strftime( 
-                "%Y-%m-%dT%H:%M:%S"),  
+                "%Y-%m-%d %H:%M:%S"),  
             "payload": body } 
     msg_str = json.dumps(msg) 
     producer.produce(msg_str.encode('utf-8'))
@@ -85,6 +87,8 @@ def review_info(body):
 
     return NoContent, 201
 
+def get_health():
+    return 200
 
 app = connexion.FlaskApp(__name__, specification_dir='')
 app.add_api("openapi.yml", base_path="/receiver", strict_validation=True, validate_responses=True)

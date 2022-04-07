@@ -50,6 +50,7 @@ services:
       - my-db:/var/lib/mysql 
   receiver: 
     image: receiver
+    build: ../Receiver
     ports: 
       - '8080'
     networks:
@@ -63,6 +64,7 @@ services:
       - 'kafka'
   storage: 
     image: storage 
+    build: ../Storage
     ports: 
       - '8090'
     networks:
@@ -77,6 +79,7 @@ services:
       - 'db'
   process: 
     image: processing
+    build: ../Processing
     ports:
       - "8100"
     networks:
@@ -90,6 +93,7 @@ services:
     depends_on: 
       - 'storage'
   audit: 
+    build: ../audit_log
     image: audit_log
     ports: 
       - '8110'
@@ -103,6 +107,7 @@ services:
     depends_on: 
       - 'kafka'
   dashboard:
+    build: ../dashboard-ui
     image: dashboard
     ports:
       - "3000"
@@ -111,7 +116,20 @@ services:
     depends_on:
     - "process"
     - "audit"
+  health:
+    build: ../Health
+    environment:
+      - TARGET_ENV=test
+    ports:
+      - "8120"
+    networks:
+      - "api.network"
+    volumes:
+      - /home/azureuser/config/health:/config
+      - /home/azureuser/logs:/logs
+      - health-db:/data
   nginx:
+    restart: always
     image: nginx:latest
     # Connects the conf file of the container to the conf file in our folder
     volumes:

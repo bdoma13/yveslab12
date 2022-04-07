@@ -13,15 +13,15 @@ c.execute('''
            num_of_ticket INTEGER NOT NULL, 
            last_updated VARCHAR(100) NOT NULL) 
           ''') 
-c.execute(''' 
-        INSERT INTO stats(
-        num_of_review, 
-        avg_age, 
-        avg_rating, 
-        total_sale, 
-        num_of_ticket, 
-        last_updated)
-        VALUES(0,0,0,0, '1000-01-01 01:00:00'); 
-        ''')  
+#c.execute(''' 
+#        INSERT INTO stats(
+#        num_of_review, 
+#        avg_age, 
+#        avg_rating, 
+#        total_sale, 
+#        num_of_ticket, 
+#        last_updated)
+#        VALUES(0,0,0,0, '1000-01-01 01:00:00'); 
+#        ''')  
 conn.commit() 
 conn.close()    
