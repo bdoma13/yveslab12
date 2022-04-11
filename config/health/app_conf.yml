@@ -1,0 +1,12 @@
+version: 1
+scheduler:
+  period_sec: 20
+datastore:
+  filename: /data/health.sqlite
+response:
+  period_sec: 5
+eventurl:
+  receiver: http://acit3855-hosung.westus3.cloudapp.azure.com/receiver
+  storage: http://acit3855-hosung.westus3.cloudapp.azure.com/storage
+  processing: http://acit3855-hosung.westus3.cloudapp.azure.com/processing
+  audit_log: http://acit3855-hosung.westus3.cloudapp.azure.com/audit_log
